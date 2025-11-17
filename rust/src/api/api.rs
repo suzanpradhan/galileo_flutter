@@ -4,14 +4,14 @@
 //! managing Galileo maps in Flutter applications with real texture rendering.
 
 use flutter_rust_bridge::frb;
-use galileo::TileSchema;
 use galileo::control::UserEventHandler;
 use galileo::layer::data_provider::remove_parameters_modifier;
 use galileo::layer::raster_tile_layer::RasterTileLayerBuilder;
-use galileo::layer::vector_tile_layer::VectorTileLayerBuilder;
 use galileo::layer::vector_tile_layer::style::VectorTileStyle;
+use galileo::layer::vector_tile_layer::VectorTileLayerBuilder;
 use galileo::render::text::text_service::TextService;
 use galileo::render::text::RustybuzzRasterizer;
+use galileo::TileSchema;
 use log::{debug, info};
 use std::sync::atomic::Ordering;
 
@@ -44,7 +44,6 @@ fn initialize_font_service() {
     // TODO: support custom fonts
     service.load_fonts("C:/Windows/Fonts");
 }
-
 
 #[derive(Clone, Debug)]
 pub struct CreateNewSessionResponse {
@@ -151,7 +150,10 @@ pub fn add_session_layer(session_id: SessionID, layer_config: LayerConfig) -> an
             let layer = RasterTileLayerBuilder::new_osm()
                 .build()
                 .map_err(|e| anyhow::anyhow!("Failed to create OSM layer: {}", e))?;
-            TOKIO_RUNTIME.get().unwrap().block_on(session.add_layer(layer));
+            TOKIO_RUNTIME
+                .get()
+                .unwrap()
+                .block_on(session.add_layer(layer));
         }
         LayerConfig::RasterTiles {
             url_template: _,
@@ -162,7 +164,10 @@ pub fn add_session_layer(session_id: SessionID, layer_config: LayerConfig) -> an
             let layer = RasterTileLayerBuilder::new_osm()
                 .build()
                 .map_err(|e| anyhow::anyhow!("Failed to create OSM layer: {}", e))?;
-            TOKIO_RUNTIME.get().unwrap().block_on(session.add_layer(layer));
+            TOKIO_RUNTIME
+                .get()
+                .unwrap()
+                .block_on(session.add_layer(layer));
         }
         LayerConfig::VectorTiles {
             url_template,
@@ -171,19 +176,26 @@ pub fn add_session_layer(session_id: SessionID, layer_config: LayerConfig) -> an
         } => {
             let style: VectorTileStyle = serde_json::from_str(&style_json)
                 .map_err(|e| anyhow::anyhow!("Failed to parse vector tile style: {}", e))?;
-            
+
             let mut builder = VectorTileLayerBuilder::new_rest(create_url_source(url_template))
-            .with_style(style)
-            .with_tile_schema(TileSchema::test_schema())
-            .with_file_cache_modifier_checked(".tile_cache", Box::new(remove_parameters_modifier));
-            
+                .with_style(style)
+                .with_tile_schema(TileSchema::web(19))
+                .with_file_cache_modifier_checked(
+                    ".tile_cache",
+                    Box::new(remove_parameters_modifier),
+                );
+
             if let Some(attr) = attribution {
                 builder = builder.with_attribution(attr, "".to_string());
             }
-            
-            let layer = builder.build()
+
+            let layer = builder
+                .build()
                 .map_err(|e| anyhow::anyhow!("Failed to create vector tile layer: {}", e))?;
-            TOKIO_RUNTIME.get().unwrap().block_on(session.add_layer(layer));
+            TOKIO_RUNTIME
+                .get()
+                .unwrap()
+                .block_on(session.add_layer(layer));
         }
     }
 
@@ -192,7 +204,10 @@ pub fn add_session_layer(session_id: SessionID, layer_config: LayerConfig) -> an
 
 pub fn get_map_viewport(session_id: SessionID) -> Option<MapViewport> {
     if let Some(session) = SESSIONS.lock().get(&session_id).cloned() {
-        return TOKIO_RUNTIME.get().unwrap().block_on(session.get_viewport());
+        return TOKIO_RUNTIME
+            .get()
+            .unwrap()
+            .block_on(session.get_viewport());
     }
     None
 }
@@ -226,7 +241,7 @@ pub fn resize_session(session_id: SessionID, new_size: MapSize) -> anyhow::Resul
     let session = sessions
         .get(&session_id)
         .ok_or_else(|| anyhow::anyhow!("Session {} not found", session_id))?;
-    
+
     TOKIO_RUNTIME
         .get()
         .unwrap()

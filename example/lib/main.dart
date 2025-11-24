@@ -1,7 +1,14 @@
+// ignore_for_file: constant_identifier_names
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'package:galileo_flutter/galileo_flutter.dart';
+
+// load from env
+const MAP_TILER_API_KEY = '';
+const MAP_TILER_URL_TEMPLATE =
+    'https://api.maptiler.com/tiles/v3-openmaptiles/{z}/{x}/{y}.pbf?key=$MAP_TILER_API_KEY';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -56,6 +63,7 @@ class _GalileoMapPageState extends State<GalileoMapPage> {
   Future<void> _loadVectorTileStyle() async {
     try {
       final style = await rootBundle.loadString("assets/vt_style.json");
+      debugPrint('Style: $style');
       setState(() {
         _vectorTileStyle = style;
         statusMessage = 'Map is ready';
@@ -68,26 +76,6 @@ class _GalileoMapPageState extends State<GalileoMapPage> {
     }
   }
 
-  final style_str = '''{
-      "rules": [
-        {
-          "symbol": {
-            "line": {
-              "stroke_color": "#000000ff",
-              "width": 0.5
-            }
-          }
-        },
-        {
-          "symbol": {
-            "polygon": {
-              "fill_color": "#999999ff"
-            }
-          }
-        }
-      ],
-      "background": "#ffffffff"
-    }''';
 
   void _onViewportChanged(MapViewport viewport) {
     // setState(() {
@@ -159,9 +147,8 @@ class _GalileoMapPageState extends State<GalileoMapPage> {
                         layers: [
                           // const LayerConfig.osm(),
                           LayerConfig.vectorTiles(
-                            // urlTemplate: 'https://api.protomaps.com/tiles/v4/{z}/{x}/{y}.mvt?key=07be0dc677fb29d3',
                             urlTemplate:
-                                'https://api.maptiler.com/tiles/v3-openmaptiles/{z}/{x}/{y}.pbf?key=PZ3FHCeFcKn9AF7iL6SO',
+                                MAP_TILER_URL_TEMPLATE,
                             styleJson: _vectorTileStyle!,
                           ),
                         ],

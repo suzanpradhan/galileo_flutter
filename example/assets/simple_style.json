@@ -1,0 +1,20 @@
+{
+    "rules": [
+        {
+            "symbol": {
+                "line": {
+                    "stroke_color": "#000000ff",
+                    "width": 0.5
+                }
+            }
+        },
+        {
+            "symbol": {
+                "polygon": {
+                    "fill_color": "#999999ff"
+                }
+            }
+        }
+    ],
+    "background": "#ffffffff"
+}

@@ -6,7 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:galileo_flutter/galileo_flutter.dart';
 
 // load from env
-const MAP_TILER_API_KEY = '';
+const MAP_TILER_API_KEY = 'PZ3FHCeFcKn9AF7iL6SO';
 const MAP_TILER_URL_TEMPLATE =
     'https://api.maptiler.com/tiles/v3-openmaptiles/{z}/{x}/{y}.pbf?key=$MAP_TILER_API_KEY';
 
@@ -52,8 +52,8 @@ class GalileoMapPage extends StatefulWidget {
 class _GalileoMapPageState extends State<GalileoMapPage> {
   MapViewport? currentViewport;
   String statusMessage = 'Loading...';
-  String? _layerConfigString;
-  LayerConfig? _layerConfig;
+  String _layerConfigString = 'osm_tile_layer';
+  LayerConfig _layerConfig = LayerConfig.osm();
 
   void _onViewportChanged(MapViewport viewport) {}
 
@@ -147,11 +147,11 @@ class _GalileoMapPageState extends State<GalileoMapPage> {
                     ),
                     DropdownMenuItem(
                       value: 'vector_tile_layer_1',
-                      child: Text('Vector Tile Layer 1'),
+                      child: Text('Vector Tile Style 1'),
                     ),
                     DropdownMenuItem(
                       value: 'vector_tile_layer_2',
-                      child: Text('Vector Tile Layer 2'),
+                      child: Text('Vector Tile Style 2'),
                     ),
                   ],
                 ),

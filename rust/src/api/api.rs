@@ -40,9 +40,7 @@ pub fn galileo_flutter_init(ffi_ptr: i64) {
 
 fn initialize_font_service() {
     let rasterizer: RustybuzzRasterizer = RustybuzzRasterizer::default();
-    let service: &'static TextService = TextService::initialize(rasterizer);
-    // TODO: support custom fonts
-    service.load_fonts("C:/Windows/Fonts");
+    let _service: &'static TextService = TextService::initialize(rasterizer);
 }
 
 #[derive(Clone, Debug)]
@@ -117,12 +115,18 @@ pub fn destroy_all_engine_sessions(engine_id: i64) {
 pub fn destroy_session(session_id: SessionID) {
     debug!("destroy_session called for session {}", session_id);
     if let Some(session) = SESSIONS.lock().remove(&session_id) {
-        TOKIO_RUNTIME.get().unwrap().block_on(session.terminate());
+        let flctx = TOKIO_RUNTIME.get().unwrap().block_on(session.terminate());
+        
+        if let Some(ctx) = flctx {
+            crate::utils::invoke_on_platform_main_thread(move || {
+                drop(ctx);
+            });
+        }
 
         info!("Session {} destroyed with full cleanup", session_id);
-        
+    } else {
+        info!("Session {session_id} does not exist");
     }
-    info!("Session {session_id} does not exist")
 }
 
 /// Replaces {z}, {x}, {y} with tile indices
@@ -177,6 +181,7 @@ pub fn add_session_layer(session_id: SessionID, layer_config: LayerConfig) -> an
             let style: VectorTileStyle = serde_json::from_str(&style_json)
                 .map_err(|e| anyhow::anyhow!("Failed to parse vector tile style: {}", e))?;
 
+            #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
             let mut builder = VectorTileLayerBuilder::new_rest(create_url_source(url_template))
                 .with_style(style)
                 .with_tile_schema(TileSchema::web(19))
@@ -184,6 +189,12 @@ pub fn add_session_layer(session_id: SessionID, layer_config: LayerConfig) -> an
                     ".tile_cache",
                     Box::new(remove_parameters_modifier),
                 );
+
+            // temporary skip file cache for mobile platforms
+            #[cfg(not(any(target_os = "windows", target_os = "macos", target_os = "linux")))]
+            let mut builder = VectorTileLayerBuilder::new_rest(create_url_source(url_template))
+                .with_style(style)
+                .with_tile_schema(TileSchema::web(19));
 
             if let Some(attr) = attribution {
                 builder = builder.with_attribution(attr, "".to_string());

@@ -149,8 +149,8 @@ impl PixelBuffer {
         });
 
         // Poll the device to process the mapping request
-        let _ = self.device.poll(wgpu::MaintainBase::Wait);
-
+        let _ = self.device.poll(wgpu::PollType::Wait { submission_index: None, timeout: None });
+        
         // Wait for mapping to complete
         receiver
             .await

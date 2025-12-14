@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart' show kDebugMode, debugPrint;
 import 'package:flutter/gestures.dart';
@@ -125,6 +126,12 @@ class _GalileoMapWidgetState extends State<GalileoMapWidget> {
   MapSize? _lastMapSize;
   double _lastPinchScaleValue = 1;
   bool _isPinchScaling = false;
+  
+  final Set<int> _activePointers = {};
+
+  double get _devicePixelRatio {
+    return MediaQuery.of(context).devicePixelRatio;
+  }
 
   @override
   void initState() {
@@ -200,7 +207,10 @@ class _GalileoMapWidgetState extends State<GalileoMapWidget> {
     mapContent = Listener(
       behavior: HitTestBehavior.opaque,
       onPointerDown: (event) {
-        if (_isPinchScaling) {
+
+        _activePointers.add(event.pointer);
+        
+        if (_activePointers.length > 1 || _isPinchScaling) {
           return;
         }
 
@@ -211,13 +221,15 @@ class _GalileoMapWidgetState extends State<GalileoMapWidget> {
         widget.onTap?.call(event.localPosition.dx, event.localPosition.dy);
         _lastPointerPosition = event.localPosition;
 
+        final scaleFactor = _devicePixelRatio;
+
         // Handle button press for primary pointer
         final mouseEvent = UserEvent.buttonPressed(
           MouseButton.left, // Default to left for touch
           MouseEvent(
             screenPointerPosition: Point2(
-              x: event.localPosition.dx,
-              y: event.localPosition.dy,
+              x: event.localPosition.dx * scaleFactor,
+              y: event.localPosition.dy * scaleFactor,
             ),
             buttons: const MouseButtonsState(
               left: MouseButtonState.pressed,
@@ -229,14 +241,17 @@ class _GalileoMapWidgetState extends State<GalileoMapWidget> {
         widget.controller.handleEvent(mouseEvent);
       },
       onPointerUp: (event) {
+        _activePointers.remove(event.pointer);
+        
         _lastPointerPosition = null;
+        final scaleFactor = _devicePixelRatio;
         // Handle button release for primary pointer
         final mouseEvent = UserEvent.buttonReleased(
           MouseButton.left, // Default to left for touch
           MouseEvent(
             screenPointerPosition: Point2(
-              x: event.localPosition.dx,
-              y: event.localPosition.dy,
+              x: event.localPosition.dx * scaleFactor,
+              y: event.localPosition.dy * scaleFactor,
             ),
             buttons: const MouseButtonsState(
               left: MouseButtonState.released,
@@ -248,14 +263,17 @@ class _GalileoMapWidgetState extends State<GalileoMapWidget> {
         widget.controller.handleEvent(mouseEvent);
       },
       onPointerCancel: (event) {
+        _activePointers.remove(event.pointer);
+        
         _lastPointerPosition = null;
+        final scaleFactor = _devicePixelRatio;
         // Release button on cancel
         final mouseEvent = UserEvent.buttonReleased(
           MouseButton.left,
           MouseEvent(
             screenPointerPosition: Point2(
-              x: event.localPosition.dx,
-              y: event.localPosition.dy,
+              x: event.localPosition.dx * scaleFactor,
+              y: event.localPosition.dy * scaleFactor,
             ),
             buttons: const MouseButtonsState(
               left: MouseButtonState.released,
@@ -268,27 +286,21 @@ class _GalileoMapWidgetState extends State<GalileoMapWidget> {
       },
       onPointerSignal: (event) {
         if (event is PointerScrollEvent) {
-          // Handle scroll as zoom event
-          final zoomFactor = event.scrollDelta.dy > 0 ? -1.0 : 1.0;
-          final scrollEvent = UserEvent.scroll(
+          final delta = -event.scrollDelta.dy;
+
+          const zoomSensitivity = 0.002;
+          final zoomFactor = math.pow(1.0 - zoomSensitivity, delta).toDouble();
+          final scaleFactor = _devicePixelRatio;
+          final zoomEvent = UserEvent.zoom(
             zoomFactor,
-            MouseEvent(
-              screenPointerPosition: Point2(
-                x: event.localPosition.dx,
-                y: event.localPosition.dy,
-              ),
-              buttons: const MouseButtonsState(
-                left: MouseButtonState.released,
-                middle: MouseButtonState.released,
-                right: MouseButtonState.released,
-              ),
-            ),
+            Point2(x: event.localPosition.dx * scaleFactor, y: event.localPosition.dy * scaleFactor),
           );
-          widget.controller.handleEvent(scrollEvent);
+
+          widget.controller.handleEvent(zoomEvent);
         }
       },
       onPointerMove: (event) {
-        if (_isPinchScaling) {
+        if (_isPinchScaling || _activePointers.length > 1) {
           return;
         }
 
@@ -302,13 +314,14 @@ class _GalileoMapWidgetState extends State<GalileoMapWidget> {
           final delta = currentPosition - lastPosition;
 
           if (delta.dx.abs() > 0.1 || delta.dy.abs() > 0.1) {
+            final scaleFactor = _devicePixelRatio;
             final panEvent = UserEvent.drag(
               MouseButton.left,
-              Vector2(dx: delta.dx, dy: delta.dy),
+              Vector2(dx: delta.dx * scaleFactor, dy: delta.dy * scaleFactor),
               MouseEvent(
                 screenPointerPosition: Point2(
-                  x: currentPosition.dx,
-                  y: currentPosition.dy,
+                  x: currentPosition.dx * scaleFactor,
+                  y: currentPosition.dy * scaleFactor,
                 ),
                 buttons: const MouseButtonsState(
                   left: MouseButtonState.pressed,
@@ -350,10 +363,12 @@ class _GalileoMapWidgetState extends State<GalileoMapWidget> {
           }
 
           if (details.scale != _lastPinchScaleValue) {
-            // TODO: test this
             final scaleDelta = details.scale / _lastPinchScaleValue;
+            const zoomSensitivity = 2.5;
+            final amplifiedDelta = math.pow(scaleDelta, zoomSensitivity).toDouble();
+            
             final zoomEvent = UserEvent.zoom(
-              1.0 / scaleDelta,
+              1.0 / amplifiedDelta,
               Point2(
                 x: details.localFocalPoint.dx,
                 y: details.localFocalPoint.dy,
@@ -623,6 +638,10 @@ class _GalileoMapWidgetState extends State<GalileoMapWidget> {
     if (widget.enableKeyboard) {
       HardwareKeyboard.instance.removeHandler(_handleKeyEvent);
     }
+
+    Future.microtask(() async {
+      await widget.controller.dispose();
+    });
 
     super.dispose();
 

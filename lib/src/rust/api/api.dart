@@ -7,12 +7,15 @@ import '../frb_generated.dart';
 import 'dart_types.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These functions are ignored because they are not marked as `pub`: `create_url_source`
+// These functions are ignored because they are not marked as `pub`: `create_url_source`, `initialize_font_service`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `fmt`
 
 /// Initialize the Galileo Flutter plugin with FFI pointer for irondash
 Future<void> galileoFlutterInit({required PlatformInt64 ffiPtr}) =>
     RustLib.instance.api.crateApiApiGalileoFlutterInit(ffiPtr: ffiPtr);
+
+Future<void> setTileCachePath({String? path}) =>
+    RustLib.instance.api.crateApiApiSetTileCachePath(path: path);
 
 Future<CreateNewSessionResponse> createNewMapSession({
   required PlatformInt64 engineHandle,

@@ -126,7 +126,7 @@ class _GalileoMapWidgetState extends State<GalileoMapWidget> {
   MapSize? _lastMapSize;
   double _lastPinchScaleValue = 1;
   bool _isPinchScaling = false;
-  
+
   final Set<int> _activePointers = {};
 
   double get _devicePixelRatio {
@@ -207,9 +207,8 @@ class _GalileoMapWidgetState extends State<GalileoMapWidget> {
     mapContent = Listener(
       behavior: HitTestBehavior.opaque,
       onPointerDown: (event) {
-
         _activePointers.add(event.pointer);
-        
+
         if (_activePointers.length > 1 || _isPinchScaling) {
           return;
         }
@@ -242,7 +241,7 @@ class _GalileoMapWidgetState extends State<GalileoMapWidget> {
       },
       onPointerUp: (event) {
         _activePointers.remove(event.pointer);
-        
+
         _lastPointerPosition = null;
         final scaleFactor = _devicePixelRatio;
         // Handle button release for primary pointer
@@ -264,7 +263,7 @@ class _GalileoMapWidgetState extends State<GalileoMapWidget> {
       },
       onPointerCancel: (event) {
         _activePointers.remove(event.pointer);
-        
+
         _lastPointerPosition = null;
         final scaleFactor = _devicePixelRatio;
         // Release button on cancel
@@ -293,7 +292,10 @@ class _GalileoMapWidgetState extends State<GalileoMapWidget> {
           final scaleFactor = _devicePixelRatio;
           final zoomEvent = UserEvent.zoom(
             zoomFactor,
-            Point2(x: event.localPosition.dx * scaleFactor, y: event.localPosition.dy * scaleFactor),
+            Point2(
+              x: event.localPosition.dx * scaleFactor,
+              y: event.localPosition.dy * scaleFactor,
+            ),
           );
 
           widget.controller.handleEvent(zoomEvent);
@@ -365,8 +367,9 @@ class _GalileoMapWidgetState extends State<GalileoMapWidget> {
           if (details.scale != _lastPinchScaleValue) {
             final scaleDelta = details.scale / _lastPinchScaleValue;
             const zoomSensitivity = 2.5;
-            final amplifiedDelta = math.pow(scaleDelta, zoomSensitivity).toDouble();
-            
+            final amplifiedDelta =
+                math.pow(scaleDelta, zoomSensitivity).toDouble();
+
             final zoomEvent = UserEvent.zoom(
               1.0 / amplifiedDelta,
               Point2(
